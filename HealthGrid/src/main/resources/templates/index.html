@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<!--
+  Spring Boot Controller 예시:
+  @GetMapping("/")
+  public String dashboard(Model model, @AuthenticationPrincipal UserDetails userDetails) {
+      UserDto user = userService.getUserByUsername(userDetails.getUsername());
+      int todayCalories = mealService.getTodayTotalCalories(user.getId());
+      int todayBurned = exerciseService.getTodayTotalCalories(user.getId());
+      List<MealDto> todayMeals = mealService.getTodayMeals(user.getId());
+      List<ExerciseLogDto> todayExercises = exerciseService.getTodayLogs(user.getId());
+      model.addAttribute("user", user);
+      model.addAttribute("todayCalories", todayCalories);
+      model.addAttribute("todayBurned", todayBurned);
+      model.addAttribute("todayMeals", todayMeals);
+      model.addAttribute("todayExercises", todayExercises);
+      return "index";
+  }
+
+  UserDto 필드: id, username, name, weight(double)
+  MealDto 필드: id, tag(아침/점심/저녁/간식), name, imageUrl, calories
+  ExerciseLogDto 필드: id, name, detail, calories
+-->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(pageTitle='대시보드')}"></head>
+<body>
+<div class="app-layout">
+
+  <div th:replace="~{fragments/sidebar :: sidebar(activePage='dashboard')}"></div>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <!-- user.name: String -->
+        <h1>안녕하세요, <span th:text="${user.name}">김건강</span>님!</h1>
+        <p class="text-sm text-muted">오늘도 건강한 하루를 시작하세요.</p>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- Stat Cards -->
+      <!-- user.weight: double, todayCalories: int, todayBurned: int -->
+      <div class="grid grid-3 mb-lg stagger">
+
+        <!-- 현재 체중 -->
+        <div class="card stat-card animate-fade-in-up">
+          <div class="stat-icon" style="background:var(--teal-50); color:var(--teal-600);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </div>
+          <div class="stat-label">현재 체중</div>
+          <div class="stat-value">
+            <span th:text="${user.weight}">72</span>
+            <span class="stat-unit">kg</span>
+          </div>
+        </div>
+
+        <!-- 오늘 섭취 칼로리 -->
+        <div class="card stat-card animate-fade-in-up">
+          <div class="stat-icon" style="background:var(--green-50); color:var(--green-600);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+              <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/>
+              <line x1="14" y1="1" x2="14" y2="4"/>
+            </svg>
+          </div>
+          <div class="stat-label">오늘 섭취 칼로리</div>
+          <div class="stat-value">
+            <span th:text="${#numbers.formatInteger(todayCalories, 0, 'COMMA')}">1,850</span>
+            <span class="stat-unit">kcal</span>
+          </div>
+        </div>
+
+        <!-- 오늘 소모 칼로리 -->
+        <div class="card stat-card animate-fade-in-up">
+          <div class="stat-icon" style="background:#eff6ff; color:#2563eb;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+          </div>
+          <div class="stat-label">오늘 소모 칼로리</div>
+          <div class="stat-value">
+            <span th:text="${#numbers.formatInteger(todayBurned, 0, 'COMMA')}">420</span>
+            <span class="stat-unit">kcal</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Today Summary -->
+      <div class="grid grid-2 mb-lg">
+
+        <!-- 오늘의 식단 -->
+        <!-- todayMeals: List<MealDto> -->
+        <div class="card animate-fade-in-up">
+          <div class="card-header">
+            <div class="card-title">오늘의 식단</div>
+            <a th:href="@{/diet}" class="btn btn-sm btn-secondary">상세보기</a>
+          </div>
+
+          <!-- 식단 없을 때 -->
+          <div th:if="${todayMeals.isEmpty()}"
+               style="text-align:center; padding:var(--space-xl); color:var(--color-text-muted); font-size:0.9rem;">
+            오늘 등록된 식단이 없습니다.
+          </div>
+
+          <!-- 식단 목록 -->
+          <div class="flex-col gap-sm" th:unless="${todayMeals.isEmpty()}">
+            <div class="summary-item" th:each="meal : ${todayMeals}">
+              <img class="summary-img"
+                   th:src="${meal.imageUrl}"
+                   th:alt="${meal.name}"
+                   src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=80&h=80&fit=crop">
+              <div class="summary-info">
+                <div style="display:flex; align-items:center; gap:var(--space-xs);">
+                  <span class="meal-tag"
+                        th:text="${meal.tag}"
+                        th:style="${meal.tag == '아침'} ? 'background:var(--teal-50); color:var(--teal-700);' :
+                                   (${meal.tag == '점심'} ? 'background:var(--green-50); color:var(--green-600);' :
+                                   (${meal.tag == '저녁'} ? 'background:#eff6ff; color:#2563eb;' :
+                                    'background:#fefce8; color:#ca8a04;'))">아침</span>
+                </div>
+                <div class="summary-name" th:text="${meal.name}">통밀 토스트 + 스크램블 에그</div>
+              </div>
+              <div class="summary-cal" th:text="${meal.calories} + ' kcal'">450 kcal</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오늘의 운동 (아이콘 없음) -->
+        <!-- todayExercises: List<ExerciseLogDto> -->
+        <div class="card animate-fade-in-up">
+          <div class="card-header">
+            <div class="card-title">오늘의 운동</div>
+            <a th:href="@{/exercise}" class="btn btn-sm btn-secondary">상세보기</a>
+          </div>
+
+          <!-- 운동 없을 때 -->
+          <div th:if="${todayExercises.isEmpty()}"
+               style="text-align:center; padding:var(--space-xl); color:var(--color-text-muted); font-size:0.9rem;">
+            오늘 기록된 운동이 없습니다.
+          </div>
+
+          <!-- 운동 목록 (아이콘 없음) -->
+          <div class="flex-col gap-sm" th:unless="${todayExercises.isEmpty()}">
+            <div class="summary-item" th:each="ex : ${todayExercises}">
+              <div class="summary-info">
+                <div class="summary-name" th:text="${ex.name}">러닝</div>
+                <div class="text-xs text-muted" th:text="${ex.detail}">30분 · 5.2km</div>
+              </div>
+              <div class="summary-cal" th:text="${ex.calories} + ' kcal'">280 kcal</div>
+            </div>
+          </div>
+
+          <!-- 총 소모 칼로리 -->
+          <div th:unless="${todayExercises.isEmpty()}"
+               style="margin-top:var(--space-md); padding-top:var(--space-md); border-top:1px solid var(--color-border);">
+            <div class="flex-row justify-between">
+              <span class="text-sm text-muted">총 소모</span>
+              <span class="font-bold text-primary" th:text="${todayBurned} + ' kcal'">420 kcal</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+<script>
+  initSidebar();
+  initNavHighlight();
+</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<!--
+  Spring Boot Controller 예시:
+  @GetMapping("/login")
+  public String loginPage(Model model) {
+      model.addAttribute("loginForm", new LoginForm());
+      model.addAttribute("errorMessage", null); // 오류 시 메시지 전달
+      return "login";
+  }
+
+  @PostMapping("/login")
+  public String login(@ModelAttribute LoginForm form, HttpSession session, Model model) {
+      // 비밀번호 로그인 처리
+      // Spring Security 사용 시 SecurityConfig에서 처리
+  }
+
+  @PostMapping("/login/otp")
+  public String loginOtp(@ModelAttribute OtpLoginForm form, Model model) {
+      // OTP 로그인 처리
+  }
+-->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(pageTitle='로그인')}"></head>
+<body>
+<div class="auth-layout">
+
+  <!-- Left: Form -->
+  <div class="auth-left">
+    <div class="auth-box">
+
+      <!-- Logo -->
+      <div style="display:flex; align-items:center; gap:var(--space-sm); margin-bottom:var(--space-2xl);">
+        <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--teal-500),var(--green-400));border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">H</div>
+        <span style="font-size:1.3rem;font-weight:700;">Health<span style="color:var(--color-primary);">Grid</span></span>
+      </div>
+
+      <h2 class="auth-title">로그인</h2>
+      <p class="auth-subtitle">다시 오신 것을 환영합니다.</p>
+
+      <!-- 오류 메시지 (서버에서 errorMessage 전달 시 표시) -->
+      <!-- errorMessage: String (null이면 표시 안 함) -->
+      <div th:if="${errorMessage}" class="alert alert-error" style="margin-bottom:var(--space-md); padding:var(--space-sm) var(--space-md); background:#fef2f2; border:1px solid #fecaca; border-radius:var(--radius-sm); color:#dc2626; font-size:0.9rem;">
+        <span th:text="${errorMessage}">아이디 또는 비밀번호가 올바르지 않습니다.</span>
+      </div>
+
+      <!-- Tabs: Password / OTP -->
+      <div class="tabs" style="margin-bottom:var(--space-lg);">
+        <div class="tab-item active" data-tab="tab-password">아이디 / 비밀번호</div>
+        <div class="tab-item" data-tab="tab-otp">Google Authenticator</div>
+      </div>
+
+      <!-- Tab: Password Login -->
+      <!-- POST /login → Spring Security 또는 커스텀 컨트롤러 처리 -->
+      <div class="tab-content active" id="tab-password">
+        <form th:action="@{/login}" method="post" th:object="${loginForm}">
+          <!-- CSRF 토큰 (Spring Security 사용 시 자동 삽입됨) -->
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+          <div class="form-group">
+            <label class="form-label" for="username">아이디</label>
+            <input type="text" class="form-input" id="username"
+                   name="username"
+                   th:field="*{username}"
+                   placeholder="아이디를 입력하세요" required>
+            <!-- 필드 오류 표시 -->
+            <p class="form-hint" th:if="${#fields.hasErrors('username')}"
+               th:errors="*{username}" style="color:#dc2626;"></p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">비밀번호</label>
+            <input type="password" class="form-input" id="password"
+                   name="password"
+                   th:field="*{password}"
+                   placeholder="비밀번호를 입력하세요" required>
+            <p class="form-hint" th:if="${#fields.hasErrors('password')}"
+               th:errors="*{password}" style="color:#dc2626;"></p>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg);">
+            <label style="display:flex; align-items:center; gap:var(--space-sm); font-size:0.85rem; color:var(--color-text-secondary); cursor:pointer;">
+              <input type="checkbox" name="remember-me" style="accent-color:var(--color-primary); width:16px; height:16px;">
+              로그인 유지
+            </label>
+            <a th:href="@{/forgot-password}" style="font-size:0.85rem;">비밀번호 찾기</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full">로그인</button>
+        </form>
+      </div>
+
+      <!-- Tab: OTP Login -->
+      <!-- POST /login/otp 처리 -->
+      <div class="tab-content" id="tab-otp">
+        <form th:action="@{/login/otp}" method="post">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+          <div class="form-group">
+            <label class="form-label" for="otpUsername">아이디</label>
+            <input type="text" class="form-input" id="otpUsername"
+                   name="username"
+                   placeholder="아이디를 입력하세요" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="otpCode">인증 코드</label>
+            <input type="text" class="form-input" id="otpCode"
+                   name="otpCode"
+                   placeholder="6자리 인증 코드"
+                   maxlength="6"
+                   style="letter-spacing:0.3em; text-align:center; font-size:1.3rem;" required>
+            <p class="form-hint">Google Authenticator 앱에 표시된 6자리 코드를 입력하세요</p>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg w-full" style="margin-top:var(--space-md);">인증 로그인</button>
+        </form>
+      </div>
+
+      <p style="text-align:center; margin-top:var(--space-lg); font-size:0.9rem; color:var(--color-text-secondary);">
+        계정이 없으신가요? <a th:href="@{/register}" style="font-weight:600;">회원가입</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- Right: Visual -->
+  <div class="auth-right" style="background-image:url('https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/community-fitness-MLffZfgYzt2SrAt7Sb23Qw.webp');">
+    <div class="auth-quote">
+      <h2 style="font-size:1.8rem; margin-bottom:var(--space-md); color:#fff;">함께 만드는 건강</h2>
+      <p style="font-size:1rem; opacity:0.9; line-height:1.7;">식단 분석, 운동 추적, 커뮤니티까지<br>당신의 건강 파트너 헬스그리드</p>
+    </div>
+  </div>
+
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+<script>
+  initTabs();
+</script>
+</body>
+</html>

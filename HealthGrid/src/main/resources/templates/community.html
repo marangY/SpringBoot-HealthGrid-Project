@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<!--
+  Spring Boot Controller 예시:
+  @GetMapping("/community")
+  public String communityPage(Model model,
+                               @RequestParam(defaultValue = "0") int page,
+                               @RequestParam(required = false) String authorId,
+                               @AuthenticationPrincipal UserDetails userDetails) {
+      Page<PostDto> posts = postService.getPosts(page, 10, authorId);
+      model.addAttribute("posts", posts.getContent());
+      model.addAttribute("hasMore", posts.hasNext());
+      model.addAttribute("currentPage", page);
+      model.addAttribute("filterAuthorId", authorId);
+      model.addAttribute("currentUser", userService.getUserByUsername(userDetails.getUsername()));
+      model.addAttribute("writeForm", new WritePostForm());
+      return "community";
+  }
+
+  @PostMapping("/community/write")
+  public String writePost(@ModelAttribute WritePostForm form,
+                           @RequestParam(required=false) MultipartFile image,
+                           RedirectAttributes ra) {
+      postService.create(form, image);
+      ra.addFlashAttribute("successMessage", "게시글이 등록되었습니다.");
+      return "redirect:/community";
+  }
+
+  @PostMapping("/community/edit/{id}")
+  public String editPost(@PathVariable Long id, @ModelAttribute EditPostForm form, RedirectAttributes ra) {
+      postService.update(id, form);
+      ra.addFlashAttribute("successMessage", "게시글이 수정되었습니다.");
+      return "redirect:/community";
+  }
+
+  @PostMapping("/community/delete/{id}")
+  public String deletePost(@PathVariable Long id, RedirectAttributes ra) {
+      postService.delete(id);
+      ra.addFlashAttribute("successMessage", "게시글이 삭제되었습니다.");
+      return "redirect:/community";
+  }
+
+  @GetMapping("/community/my-posts")
+  @ResponseBody
+  public List<PostDto> getMyPosts(@AuthenticationPrincipal UserDetails userDetails) {
+      return postService.getMyPosts(userDetails.getUsername());
+  }
+
+  PostDto 필드: id(Long), title(String), content(String), imageUrl(String),
+               authorId(String), authorName(String), createdAt(LocalDateTime)
+  WritePostForm: title, content
+  EditPostForm: title, content
+-->
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head(pageTitle='커뮤니티')}">
+  <style>
+    /* 댓글 영역 */
+    .post-comment-toggle {
+      display: flex; align-items: center; gap: 6px;
+      padding: var(--space-sm) var(--space-lg);
+      border-top: 1px solid var(--color-border-light);
+      font-size: 0.82rem; color: var(--color-text-muted);
+      cursor: pointer;
+      transition: color var(--duration-fast) ease, background var(--duration-fast) ease;
+      user-select: none;
+    }
+    .post-comment-toggle:hover { color: var(--color-primary); background: var(--teal-50); }
+    .post-comment-toggle.active { color: var(--color-primary); }
+    .comment-section {
+      display: none;
+      border-top: 1px solid var(--color-border-light);
+      background: var(--color-bg-subtle);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      padding: var(--space-md) var(--space-lg);
+    }
+    .comment-section.open { display: block; animation: fadeIn 0.2s ease; }
+    .comment-item { display: flex; gap: var(--space-sm); padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border-light); }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-avatar { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-author { font-size: 0.82rem; font-weight: 600; color: var(--color-text); margin-bottom: 2px; }
+    .comment-text { font-size: 0.85rem; color: var(--color-text-secondary); line-height: 1.5; }
+    .comment-time { font-size: 0.72rem; color: var(--color-text-muted); margin-top: 3px; }
+    .comment-write { display: flex; gap: var(--space-sm); margin-top: var(--space-md); align-items: flex-end; }
+    .comment-input {
+      flex: 1; border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      padding: 8px 12px; font-size: 0.85rem; font-family: inherit; resize: none;
+      background: var(--color-surface); color: var(--color-text);
+      transition: border-color var(--duration-fast) ease;
+      line-height: 1.5; min-height: 38px; max-height: 100px;
+    }
+    .comment-input:focus { outline: none; border-color: var(--color-primary); }
+    .comment-submit {
+      background: var(--color-primary); color: #fff; border: none;
+      border-radius: var(--radius-md); padding: 8px 16px;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      white-space: nowrap; transition: background var(--duration-fast) ease; height: 38px;
+    }
+    .comment-submit:hover { background: var(--teal-700); }
+    .no-comments { text-align: center; padding: var(--space-md) 0; font-size: 0.82rem; color: var(--color-text-muted); }
+    /* 날짜 표시 */
+    .post-date { font-size: 0.75rem; color: var(--color-text-muted); }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <div th:replace="~{fragments/sidebar :: sidebar(activePage='community')}"></div>
+
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1>커뮤니티</h1>
+        <p class="text-sm text-muted">헬스그리드 회원들과 건강 정보를 나눠보세요</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal('writePostModal')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          글쓰기
+        </button>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- 성공 메시지 -->
+      <div th:if="${successMessage}"
+           style="margin-bottom:var(--space-md); padding:var(--space-sm) var(--space-md); background:#f0fdf4; border:1px solid #bbf7d0; border-radius:var(--radius-sm); color:#16a34a; font-size:0.9rem;"
+           th:text="${successMessage}"></div>
+
+      <!-- 작성자 필터 표시 (filterAuthorId가 있을 때) -->
+      <!-- filterAuthorId: String (null이면 전체 보기) -->
+      <div th:if="${filterAuthorId}"
+           style="margin-bottom:var(--space-md); padding:var(--space-sm) var(--space-md); background:var(--teal-50); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:space-between;">
+        <span class="text-sm" style="color:var(--teal-700);">
+          <strong th:text="${filterAuthorName}">김건강</strong>님의 게시글만 보는 중
+        </span>
+        <a th:href="@{/community}" class="btn btn-sm btn-outline" style="font-size:0.8rem;">전체 보기</a>
+      </div>
+
+      <!-- 게시글 목록 -->
+      <!-- posts: List<PostDto> -->
+      <div id="postList" class="flex-col gap-md">
+        <div class="card post-card animate-fade-in-up" th:each="post : ${posts}"
+             th:attr="data-id=${post.id}">
+          <!-- 게시글 이미지 (있을 때만 표시) -->
+          <img th:if="${post.imageUrl}"
+               class="post-img"
+               th:src="${post.imageUrl}"
+               th:alt="${post.title}">
+
+          <div class="post-body">
+            <div class="post-meta">
+              <!-- 작성자 클릭 → 해당 작성자 게시글 필터 -->
+              <a class="post-author"
+                 th:href="@{/community(authorId=${post.authorId})}"
+                 th:text="${post.authorName}">김건강</a>
+              <span class="post-date"
+                    th:text="${#temporals.format(post.createdAt, 'yyyy년 M월 d일 HH:mm')}">2026년 4월 10일 14:35</span>
+            </div>
+            <h3 class="post-title" th:text="${post.title}">오늘 처음으로 5km 완주했어요!</h3>
+            <p class="post-content" th:text="${post.content}">
+              3개월 전부터 달리기를 시작했는데 드디어 오늘 5km를 완주했습니다...
+            </p>
+
+            <!-- 내 게시글일 때만 수정/삭제 버튼 표시 -->
+            <!-- currentUser.id == post.authorId 비교 -->
+            <div th:if="${currentUser.id == post.authorId}"
+                 style="display:flex; gap:var(--space-sm); margin-top:var(--space-sm);">
+              <button class="btn btn-sm btn-outline"
+                      th:onclick="'openEditModal(' + ${post.id} + ', \'' + ${#strings.escapeXml(post.title)} + '\', \'' + ${#strings.escapeXml(post.content)} + '\')'">
+                수정
+              </button>
+              <button class="btn btn-sm btn-outline" style="color:var(--color-error); border-color:var(--color-error);"
+                      th:onclick="'confirmDelete(' + ${post.id} + ')'">
+                삭제
+              </button>
+            </div>
+          </div>
+
+          <!-- 댓글 토글 버튼 -->
+          <!-- post.commentCount: int (댓글 수) -->
+          <div class="post-comment-toggle"
+               th:id="'toggle-' + ${post.id}"
+               th:onclick="'toggleComments(\'' + ${post.id} + '\')'">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span th:id="'comment-count-' + ${post.id}"
+                  th:text="${post.commentCount != null ? post.commentCount : 0}">0</span>
+            <span>댓글</span>
+          </div>
+
+          <!-- 댓글 섹션 (초기 숨김, toggleComments()로 열림) -->
+          <!-- post.comments: List<CommentDto> -->
+          <div class="comment-section" th:id="'comments-' + ${post.id}">
+            <div th:id="'comment-list-' + ${post.id}">
+              <!-- 댓글 없을 때 -->
+              <div class="no-comments"
+                   th:if="${post.comments == null or post.comments.isEmpty()}">
+                댓글이 없습니다. 첫 댓글을 달아보세요!
+              </div>
+              <!-- 댓글 목록 -->
+              <!-- CommentDto: id, authorId, authorName, authorInitials, authorColor, text, createdAt -->
+              <div class="comment-item" th:each="comment : ${post.comments}">
+                <div class="comment-avatar"
+                     th:style="'background:linear-gradient(135deg,' + ${comment.authorColor} + ',var(--teal-100));'"
+                     th:text="${comment.authorInitials}">김</div>
+                <div class="comment-body">
+                  <div class="comment-author" th:text="${comment.authorName}">작성자</div>
+                  <div class="comment-text" th:text="${comment.text}">댓글 내용</div>
+                  <div class="comment-time"
+                       th:text="${#temporals.format(comment.createdAt, 'yyyy년 M월 d일 HH:mm')}">2026년 4월 11일 09:00</div>
+                </div>
+              </div>
+            </div>
+            <!-- 댓글 작성창 -->
+            <!-- AJAX: POST /community/post/{postId}/comment -->
+            <div class="comment-write">
+              <textarea class="comment-input"
+                        th:id="'comment-input-' + ${post.id}"
+                        placeholder="댓글을 입력하세요..." rows="1"
+                        th:onkeydown="'if(event.key===&quot;Enter&quot;&&!event.shiftKey){event.preventDefault();submitComment(\'' + ${post.id} + '\');}'">
+              </textarea>
+              <button class="comment-submit"
+                      th:onclick="'submitComment(\'' + ${post.id} + '\')'">
+                등록
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 게시글 없을 때 -->
+      <div th:if="${posts.isEmpty()}"
+           style="text-align:center; padding:var(--space-2xl); color:var(--color-text-muted);">
+        게시글이 없습니다. 첫 번째 게시글을 작성해보세요!
+      </div>
+
+      <!-- 무한 스크롤 / 더 보기 버튼 -->
+      <!-- hasMore: boolean, currentPage: int -->
+      <div th:if="${hasMore}" style="text-align:center; margin-top:var(--space-lg);">
+        <a class="btn btn-outline"
+           th:href="@{/community(page=${currentPage + 1}, authorId=${filterAuthorId})}">
+          더 보기
+        </a>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Write Post Modal -->
+  <!-- POST /community/write (multipart/form-data) -->
+  <div class="modal-overlay" id="writePostModal">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>글쓰기</h3>
+        <div class="modal-close" onclick="closeModal('writePostModal')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </div>
+      </div>
+      <form th:action="@{/community/write}" method="post" enctype="multipart/form-data" th:object="${writeForm}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input type="text" class="form-input" th:field="*{title}" placeholder="제목을 입력하세요" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">내용</label>
+          <textarea class="form-input" th:field="*{content}" rows="5"
+                    placeholder="내용을 입력하세요" style="resize:vertical;" required></textarea>
+        </div>
+        <!-- 이미지 업로드 존 (식단 관리와 동일한 스타일) -->
+        <div class="form-group">
+          <label class="form-label">이미지 첨부 (선택)</label>
+          <div class="upload-zone" id="postUploadZone"
+               onclick="document.getElementById('postImageInput').click()"
+               ondragover="event.preventDefault(); this.classList.add('drag-over')"
+               ondragleave="this.classList.remove('drag-over')"
+               ondrop="handlePostDrop(event)">
+            <div class="upload-zone-content" id="postUploadZoneContent">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                   style="color:var(--color-text-muted); margin-bottom:var(--space-sm);">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <p class="text-sm" style="color:var(--color-text-muted); margin-bottom:4px;">클릭하거나 이미지를 드래그하세요</p>
+              <p class="text-xs text-muted">JPG, PNG, WEBP (최대 10MB)</p>
+            </div>
+            <img id="postUploadPreview"
+                 style="display:none; width:100%; height:200px; object-fit:cover; border-radius:var(--radius-sm);" alt="미리보기">
+          </div>
+          <input type="file" id="postImageInput" name="image" accept="image/*"
+                 style="display:none;" onchange="handlePostFileSelect(this)">
+        </div>
+        <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('writePostModal')">취소</button>
+          <button type="submit" class="btn btn-primary">등록하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Post Modal -->
+  <!-- POST /community/edit/{id} -->
+  <div class="modal-overlay" id="editPostModal">
+    <div class="modal" style="max-width:600px;">
+      <div class="modal-header">
+        <h3>게시글 수정</h3>
+        <div class="modal-close" onclick="closeModal('editPostModal')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </div>
+      </div>
+      <form id="editPostForm" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div class="form-group">
+          <label class="form-label">제목</label>
+          <input type="text" class="form-input" id="editTitle" name="title" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">내용</label>
+          <textarea class="form-input" id="editContent" name="content" rows="5"
+                    style="resize:vertical;" required></textarea>
+        </div>
+        <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('editPostModal')">취소</button>
+          <button type="submit" class="btn btn-primary">수정하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deletePostModal">
+    <div class="modal" style="max-width:400px;">
+      <div class="modal-header">
+        <h3>게시글 삭제</h3>
+        <div class="modal-close" onclick="closeModal('deletePostModal')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </div>
+      </div>
+      <p style="margin-bottom:var(--space-lg); color:var(--color-text-secondary);">정말로 이 게시글을 삭제하시겠습니까? 삭제된 게시글은 복구할 수 없습니다.</p>
+      <form id="deletePostForm" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('deletePostModal')">취소</button>
+          <button type="submit" class="btn btn-primary" style="background:var(--color-error); border-color:var(--color-error);">삭제</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<script th:src="@{/js/app.js}"></script>
+<script th:inline="javascript">
+  /*<![CDATA[*/
+  const contextPath = /*[[@{/}]]*/ '/';
+  /*]]>*/
+
+  initSidebar();
+  initNavHighlight();
+
+  // 수정 모달 열기
+  function openEditModal(postId, title, content) {
+    document.getElementById('editTitle').value = title;
+    document.getElementById('editContent').value = content;
+    document.getElementById('editPostForm').action = contextPath + 'community/edit/' + postId;
+    openModal('editPostModal');
+  }
+
+  // 삭제 확인 모달 열기
+  function confirmDelete(postId) {
+    document.getElementById('deletePostForm').action = contextPath + 'community/delete/' + postId;
+    openModal('deletePostModal');
+  }
+
+  // 이미지 업로드 핸들러
+  function handlePostFileSelect(input) {
+    if (input.files && input.files[0]) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('postUploadZoneContent').style.display = 'none';
+        const preview = document.getElementById('postUploadPreview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function handlePostDrop(event) {
+    event.preventDefault();
+    document.getElementById('postUploadZone').classList.remove('drag-over');
+    const file = event.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      document.getElementById('postImageInput').files = dt.files;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('postUploadZoneContent').style.display = 'none';
+        const preview = document.getElementById('postUploadPreview');
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // ===== 댓글 토글 =====
+  function toggleComments(postId) {
+    const section = document.getElementById('comments-' + postId);
+    const toggle = document.getElementById('toggle-' + postId);
+    if (!section) return;
+    const isOpen = section.classList.contains('open');
+    if (isOpen) {
+      section.classList.remove('open');
+      toggle.classList.remove('active');
+    } else {
+      section.classList.add('open');
+      toggle.classList.add('active');
+      const input = document.getElementById('comment-input-' + postId);
+      if (input) {
+        input.addEventListener('input', function() {
+          this.style.height = 'auto';
+          this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+      }
+    }
+  }
+
+  // ===== 댓글 제출 (AJAX: POST /community/post/{postId}/comment) =====
+  function submitComment(postId) {
+    const input = document.getElementById('comment-input-' + postId);
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+
+    // 실제 백엔드 연동 시 아래 코드로 교체:
+    // const csrfToken = document.querySelector('meta[name="_csrf"]')?.content;
+    // fetch(`/community/post/${postId}/comment`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+    //   body: JSON.stringify({ text })
+    // }).then(r => r.json()).then(comment => {
+    //   appendComment(postId, comment);
+    //   updateCommentCount(postId, 1);
+    // });
+
+    // 프론트 더미 처리 (백엔드 연동 전)
+    const now = new Date();
+    const timeStr = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const listEl = document.getElementById('comment-list-' + postId);
+    if (listEl) {
+      const noComment = listEl.querySelector('.no-comments');
+      if (noComment) noComment.remove();
+      listEl.insertAdjacentHTML('beforeend', `
+        <div class="comment-item" style="animation:fadeIn 0.2s ease;">
+          <div class="comment-avatar" style="background:linear-gradient(135deg,var(--teal-300),var(--teal-100));">&#xae40;</div>
+          <div class="comment-body">
+            <div class="comment-author">현재 사용자</div>
+            <div class="comment-text">${text}</div>
+            <div class="comment-time">${timeStr}</div>
+          </div>
+        </div>
+      `);
+    }
+    const countEl = document.getElementById('comment-count-' + postId);
+    if (countEl) countEl.textContent = parseInt(countEl.textContent || '0') + 1;
+    input.value = '';
+    input.style.height = 'auto';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+
+<!--/* 공통 head fragment
+     사용법: <head th:replace="~{fragments/head :: head(pageTitle='대시보드')}"></head>
+*/-->
+<th:block th:fragment="head(pageTitle)">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title th:text="${pageTitle} + ' - 헬스그리드'">헬스그리드</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link rel="stylesheet" th:href="@{/css/style.css}">
+</th:block>
+
+</head>
+</html>
