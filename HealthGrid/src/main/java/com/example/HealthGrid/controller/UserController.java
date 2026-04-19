@@ -28,7 +28,7 @@ public class UserController {
     public String login(@ModelAttribute LoginForm form, HttpSession session, Model model) {
         // 비밀번호 로그인 처리
         // Spring Security 사용 시 SecurityConfig에서 처리
-        return "login";
+        return "index";
     }
 
     @PostMapping("/login/otp")
