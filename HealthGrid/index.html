@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>헬스그리드 - HealthGrid</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="app-layout" id="appLayout">
+    <!-- Sidebar injected by JS -->
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // Inject sidebar
+    document.getElementById('appLayout').innerHTML = renderSidebar('index') + `
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <h1>대시보드</h1>
+          <p class="text-sm text-muted">오늘의 건강 현황을 한눈에 확인하세요</p>
+        </div>
+        <div class="header-actions">
+          <span class="text-sm text-muted">2026년 4월 11일</span>
+        </div>
+      </header>
+
+      <div class="page-body">
+        <!-- Hero Banner -->
+        <div class="card mb-lg" style="padding:0; overflow:hidden; position:relative;">
+          <img src="https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/hero-banner-6wjcKnSx6RgYdwhPXpYYjk.webp" alt="HealthGrid Banner" style="width:100%; height:220px; object-fit:cover;">
+          <div style="position:absolute; inset:0; background:linear-gradient(90deg, rgba(13,148,136,0.85) 0%, rgba(13,148,136,0.4) 60%, transparent 100%); display:flex; align-items:center; padding:0 var(--space-2xl);">
+            <div style="color:#fff; max-width:480px;">
+              <h2 style="font-size:1.6rem; margin-bottom:var(--space-sm); color:#fff;">안녕하세요, 김건강님!</h2>
+              <p style="font-size:0.95rem; opacity:0.9; line-height:1.6;">오늘도 건강한 하루를 시작하세요.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+          <div class="grid grid-3 mb-lg stagger">
+          <div class="card stat-card animate-fade-in-up">
+            <div class="stat-icon" style="background:var(--teal-50); color:var(--teal-600);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div class="stat-value" data-count="72">0</div>
+            <div class="stat-label">현재 체중 (kg)</div>
+
+          </div>
+
+          <div class="card stat-card animate-fade-in-up">
+            <div class="stat-icon" style="background:var(--green-50); color:var(--green-600);">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            </div>
+            <div class="stat-value" data-count="1850">0</div>
+            <div class="stat-label">오늘 섭취 칼로리</div>
+
+          </div>
+
+          <div class="card stat-card animate-fade-in-up">
+            <div class="stat-icon" style="background:#eff6ff; color:#2563eb;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="stat-value" data-count="420">0</div>
+            <div class="stat-label">오늘 소모 칼로리</div>
+
+          </div>
+
+
+        </div>
+
+        <!-- Two Column: Today's Meals + Exercise -->
+        <div class="grid grid-2 mb-lg">
+          <!-- Today's Meals Summary -->
+          <div class="card animate-fade-in-up">
+            <div class="card-header">
+              <div>
+                <div class="card-title">오늘의 식단</div>
+                <div class="card-subtitle">3끼 기록됨</div>
+              </div>
+              <a href="pages/diet.html" class="btn btn-sm btn-secondary">상세보기</a>
+            </div>
+            <div class="flex-col gap-sm">
+              <div class="meal-card">
+                <img class="meal-img" src="https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&h=200&fit=crop" alt="아침">
+                <div class="meal-info">
+                  <span class="meal-tag" style="background:var(--teal-50); color:var(--teal-700);">아침</span>
+                  <div class="meal-name">통밀 토스트 + 스크램블 에그</div>
+                  <div class="meal-nutrients">
+                    <span><strong>450</strong> kcal</span>
+                    <span>탄수화물 <strong>52g</strong></span>
+                    <span>단백질 <strong>22g</strong></span>
+                    <span>지방 <strong>18g</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="meal-card">
+                <img class="meal-img" src="https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/diet-analysis-VR7c64JeA3r4T7phyRBh7m.webp" alt="점심" style="object-fit:cover;">
+                <div class="meal-info">
+                  <span class="meal-tag" style="background:var(--green-50); color:var(--green-600);">점심</span>
+                  <div class="meal-name">닭가슴살 샐러드 + 현미밥</div>
+                  <div class="meal-nutrients">
+                    <span><strong>620</strong> kcal</span>
+                    <span>탄수화물 <strong>65g</strong></span>
+                    <span>단백질 <strong>42g</strong></span>
+                    <span>지방 <strong>15g</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div class="meal-card">
+                <img class="meal-img" src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop" alt="저녁">
+                <div class="meal-info">
+                  <span class="meal-tag" style="background:#eff6ff; color:#2563eb;">저녁</span>
+                  <div class="meal-name">연어 스테이크 + 야채볶음</div>
+                  <div class="meal-nutrients">
+                    <span><strong>780</strong> kcal</span>
+                    <span>탄수화물 <strong>45g</strong></span>
+                    <span>단백질 <strong>48g</strong></span>
+                    <span>지방 <strong>32g</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Today's Exercise -->
+          <div class="card animate-fade-in-up">
+            <div class="card-header">
+              <div>
+                <div class="card-title">오늘의 운동</div>
+                <div class="card-subtitle">목표 소모량의 70%</div>
+              </div>
+              <a href="pages/exercise.html" class="btn btn-sm btn-secondary">상세보기</a>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:var(--space-xl); margin-bottom:var(--space-lg);">
+              <div class="circular-progress">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="var(--color-bg-muted)" stroke-width="10"/>
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="url(#progressGrad)" stroke-width="10" stroke-linecap="round"
+                    stroke-dasharray="326.73" stroke-dashoffset="98"/>
+                  <defs>
+                    <linearGradient id="progressGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="var(--teal-500)"/>
+                      <stop offset="100%" stop-color="var(--green-400)"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="progress-text">
+                  <div class="progress-value">70%</div>
+                  <div class="progress-label">달성률</div>
+                </div>
+              </div>
+              <div class="flex-col gap-sm" style="flex:1;">
+                <div>
+                  <div class="text-sm text-muted">소모 칼로리</div>
+                  <div class="font-bold" style="font-size:1.3rem;">420 <span class="text-sm font-medium text-muted">/ 600 kcal</span></div>
+                </div>
+                <div class="progress-bar" style="height:6px;">
+                  <div class="progress-fill" style="width:70%;"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex-col gap-sm">
+              <div class="exercise-card">
+                <div class="exercise-info">
+                  <div class="exercise-name">러닝</div>
+                  <div class="exercise-detail">30분 · 5.2km</div>
+                </div>
+                <div class="exercise-cal">280 kcal</div>
+              </div>
+              <div class="exercise-card">
+                <div class="exercise-info">
+                  <div class="exercise-name">벤치프레스</div>
+                  <div class="exercise-detail">4세트 × 10회 · 60kg</div>
+                </div>
+                <div class="exercise-cal">90 kcal</div>
+              </div>
+              <div class="exercise-card">
+                <div class="exercise-info">
+                  <div class="exercise-name">스트레칭</div>
+                  <div class="exercise-detail">15분</div>
+                </div>
+                <div class="exercise-cal">50 kcal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+    `;
+
+    // Re-init after DOM injection
+    initSidebar();
+    initNavHighlight();
+
+    // Animate stat numbers
+    document.querySelectorAll('[data-count]').forEach(el => {
+      animateCountUp(el, parseInt(el.dataset.count));
+    });
+
+  </script>
+</body>
+</html>

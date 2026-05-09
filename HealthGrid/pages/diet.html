@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>식단 관리 - 헬스그리드</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .upload-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2xl);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--duration-fast) ease;
+      background: var(--color-bg-subtle);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--color-primary);
+      background: var(--teal-50);
+    }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-preview {
+      width: 100%;
+      max-height: 240px;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-md);
+    }
+    .nutrient-bar {
+      display: flex;
+      height: 24px;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin: var(--space-sm) 0;
+    }
+    .nutrient-bar .carb, .chart-stacked-bar .carb { background: var(--teal-400); }
+    .nutrient-bar .protein, .chart-stacked-bar .protein { background: var(--green-400); }
+    .nutrient-bar .fat, .chart-stacked-bar .fat { background: #fbbf24; }
+    .chart-bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      gap: 4px;
+    }
+    .chart-stacked-bar {
+      width: 36px;
+      border-radius: 4px 4px 0 0;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+    .day-meals { border-left: 2px solid var(--color-border-light); padding-left: var(--space-md); margin-top: var(--space-sm); }
+  </style>
+</head>
+<body>
+  <div class="app-layout" id="appLayout"></div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    const user = Store.get('user') || DUMMY_USER;
+
+    // Dummy 7-day meal data
+    const weeklyMeals = [
+      {
+        day: '월', date: '4/5',
+        meals: [
+          { tag: '아침', name: '오트밀 + 바나나', kcal: 380, carb: 58, protein: 12, fat: 10, img: 'https://images.unsplash.com/photo-1517673400267-0251440c45dc?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '비빔밥', kcal: 650, carb: 85, protein: 25, fat: 18, img: 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=200&h=200&fit=crop' },
+          { tag: '저녁', name: '된장찌개 + 밥', kcal: 520, carb: 68, protein: 22, fat: 16, img: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=200&h=200&fit=crop' },
+        ]
+      },
+      {
+        day: '화', date: '4/6',
+        meals: [
+          { tag: '아침', name: '통밀 토스트 + 계란', kcal: 420, carb: 48, protein: 20, fat: 16, img: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '닭가슴살 도시락', kcal: 580, carb: 62, protein: 40, fat: 12, img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop' },
+          { tag: '저녁', name: '연어 포케볼', kcal: 620, carb: 55, protein: 38, fat: 22, img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&h=200&fit=crop' },
+          { tag: '간식', name: '프로틴 바', kcal: 220, carb: 18, protein: 20, fat: 8, img: 'https://images.unsplash.com/photo-1622484212850-eb596d769edc?w=200&h=200&fit=crop' },
+        ]
+      },
+      {
+        day: '수', date: '4/7',
+        meals: [
+          { tag: '아침', name: '그릭요거트 + 그래놀라', kcal: 350, carb: 42, protein: 18, fat: 12, img: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '불고기 정식', kcal: 720, carb: 78, protein: 35, fat: 28, img: 'https://images.unsplash.com/photo-1529692236671-f1f6cf9683ba?w=200&h=200&fit=crop' },
+          { tag: '저녁', name: '샐러드 + 치킨', kcal: 480, carb: 22, protein: 42, fat: 20, img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop' },
+        ]
+      },
+      {
+        day: '목', date: '4/8',
+        meals: [
+          { tag: '아침', name: '스무디볼', kcal: 320, carb: 52, protein: 10, fat: 8, img: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '제육볶음 + 밥', kcal: 680, carb: 72, protein: 30, fat: 26, img: 'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?w=200&h=200&fit=crop' },
+          { tag: '저녁', name: '두부 스테이크', kcal: 420, carb: 28, protein: 32, fat: 18, img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=200&h=200&fit=crop' },
+          { tag: '간식', name: '견과류 한줌', kcal: 180, carb: 8, protein: 6, fat: 14, img: 'https://images.unsplash.com/photo-1606923829579-0cb981a83e2e?w=200&h=200&fit=crop' },
+        ]
+      },
+      {
+        day: '금', date: '4/9',
+        meals: [
+          { tag: '아침', name: '아보카도 토스트', kcal: 380, carb: 35, protein: 10, fat: 22, img: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '참치 김밥 + 우동', kcal: 620, carb: 82, protein: 24, fat: 16, img: 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=200&h=200&fit=crop' },
+          { tag: '저녁', name: '그릴드 치킨 + 야채', kcal: 520, carb: 18, protein: 48, fat: 24, img: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/diet-analysis-VR7c64JeA3r4T7phyRBh7m.webp' },
+        ]
+      },
+      {
+        day: '토', date: '4/10',
+        meals: [
+          { tag: '아침', name: '팬케이크 + 메이플시럽', kcal: 520, carb: 72, protein: 12, fat: 20, img: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '파스타 + 샐러드', kcal: 750, carb: 88, protein: 22, fat: 30, img: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=200&h=200&fit=crop' },
+          { tag: '저녁', name: '스시 세트', kcal: 680, carb: 78, protein: 32, fat: 22, img: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=200&h=200&fit=crop' },
+          { tag: '간식', name: '아이스크림', kcal: 280, carb: 35, protein: 4, fat: 14, img: 'https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=200&h=200&fit=crop' },
+        ]
+      },
+      {
+        day: '일', date: '4/11',
+        meals: [
+          { tag: '아침', name: '통밀 토스트 + 스크램블 에그', kcal: 450, carb: 52, protein: 22, fat: 18, img: 'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=200&h=200&fit=crop' },
+          { tag: '점심', name: '닭가슴살 샐러드 + 현미밥', kcal: 620, carb: 65, protein: 42, fat: 15, img: 'https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/diet-analysis-VR7c64JeA3r4T7phyRBh7m.webp' },
+          { tag: '저녁', name: '연어 스테이크 + 야채볶음', kcal: 780, carb: 45, protein: 48, fat: 32, img: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=200&h=200&fit=crop' },
+        ]
+      },
+    ];
+
+    // Calculate daily totals
+    const dailyTotals = weeklyMeals.map(d => {
+      const total = { kcal: 0, carb: 0, protein: 0, fat: 0 };
+      d.meals.forEach(m => {
+        total.kcal += m.kcal;
+        total.carb += m.carb;
+        total.protein += m.protein;
+        total.fat += m.fat;
+      });
+      return { ...d, total };
+    });
+
+    const targetCal = user.targetCalories || 2200;
+
+    document.getElementById('appLayout').innerHTML = renderSidebar('diet') + `
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <h1>식단 관리</h1>
+          <p class="text-sm text-muted">음식 사진을 등록하고 영양 성분을 분석하세요</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('uploadMealModal')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            음식 등록
+          </button>
+        </div>
+      </header>
+
+      <div class="page-body">
+        <!-- 7-Day Calorie Chart -->
+        <div class="card mb-lg animate-fade-in-up">
+          <div class="card-header">
+            <div>
+              <div class="card-title">최근 7일 칼로리 섭취량</div>
+              <div class="card-subtitle">탄수화물, 단백질, 지방 비율 포함</div>
+            </div>
+          </div>
+
+          <div id="weeklyCalChart" style="padding:var(--space-md) 0;">
+            <div id="chartBarArea" style="display:flex; align-items:flex-end; gap:8px; height:230px; position:relative;">
+            </div>
+            <div id="chartLabels" style="display:flex; gap:8px; text-align:center; margin-top:6px;">
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div style="display:flex; gap:var(--space-lg); justify-content:center; margin-top:var(--space-sm); padding-top:var(--space-md); border-top:1px solid var(--color-border-light);">
+            <div class="flex-row gap-sm text-sm"><span style="width:12px;height:12px;border-radius:2px;background:var(--teal-400);display:inline-block;"></span> 탄수화물</div>
+            <div class="flex-row gap-sm text-sm"><span style="width:12px;height:12px;border-radius:2px;background:var(--green-400);display:inline-block;"></span> 단백질</div>
+            <div class="flex-row gap-sm text-sm"><span style="width:12px;height:12px;border-radius:2px;background:#fbbf24;display:inline-block;"></span> 지방</div>
+            <div class="flex-row gap-sm text-sm"><span style="width:12px;height:2px;border-top:2px dashed var(--color-danger);display:inline-block;"></span> 목표 (${targetCal} kcal)</div>
+          </div>
+        </div>
+
+        <!-- Nutrition Comment -->
+        <div class="card mb-lg animate-fade-in-up" id="nutritionComment">
+        </div>
+
+        <!-- 7-Day Meal Details -->
+        <div class="card animate-fade-in-up">
+          <div class="card-header">
+            <div>
+              <div class="card-title">7일간 식단 상세</div>
+              <div class="card-subtitle">각 끼니별 영양 성분 및 칼로리</div>
+            </div>
+          </div>
+          <div id="mealDetails" class="flex-col gap-lg">
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Upload Meal Modal -->
+    <div class="modal-overlay" id="uploadMealModal">
+      <div class="modal" style="max-width:520px;">
+        <div class="modal-header">
+          <h3>음식 등록</h3>
+          <div class="modal-close" onclick="closeModal('uploadMealModal')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+
+        <form onsubmit="handleMealUpload(event)">
+          <!-- Meal Tag -->
+          <div class="form-group">
+            <label class="form-label">식사 구분</label>
+            <div style="display:flex; gap:var(--space-sm);">
+              <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+                <input type="radio" name="mealTag" value="아침" checked style="display:none;"> 🌅 아침
+              </label>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                <input type="radio" name="mealTag" value="점심" style="display:none;"> ☀️ 점심
+              </label>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                <input type="radio" name="mealTag" value="저녁" style="display:none;"> 🌙 저녁
+              </label>
+              <label class="btn btn-outline btn-sm" style="cursor:pointer;">
+                <input type="radio" name="mealTag" value="간식" style="display:none;"> 🍪 간식
+              </label>
+            </div>
+          </div>
+
+          <!-- Photo Upload -->
+          <div class="form-group">
+            <label class="form-label">음식 사진</label>
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('mealPhoto').click()">
+              <input type="file" id="mealPhoto" accept="image/*" onchange="handlePhotoPreview(event)">
+              <div id="uploadPlaceholder">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.5" style="margin:0 auto var(--space-sm);">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <p class="text-sm text-muted">클릭하거나 사진을 드래그하세요</p>
+                <p class="text-xs text-muted mt-sm">JPG, PNG 형식 지원</p>
+              </div>
+              <img id="photoPreview" class="upload-preview" style="display:none;">
+            </div>
+          </div>
+
+          <!-- Analysis Result (shown after upload) -->
+          <div id="analysisResult" style="display:none;">
+            <div class="card" style="background:var(--color-bg-subtle); box-shadow:none; margin-bottom:var(--space-lg);">
+              <div class="card-header" style="margin-bottom:var(--space-sm);">
+                <div class="card-title" style="font-size:0.9rem;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" style="display:inline; vertical-align:middle; margin-right:4px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                  영양 분석 결과
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-sm); text-align:center;">
+                <div style="padding:var(--space-sm); background:#fff; border-radius:var(--radius-sm);">
+                  <div class="text-xs text-muted">칼로리</div>
+                  <div class="font-bold text-primary" id="resultKcal">520</div>
+                  <div class="text-xs text-muted">kcal</div>
+                </div>
+                <div style="padding:var(--space-sm); background:#fff; border-radius:var(--radius-sm);">
+                  <div class="text-xs text-muted">탄수화물</div>
+                  <div class="font-bold" style="color:var(--teal-600);" id="resultCarb">62</div>
+                  <div class="text-xs text-muted">g</div>
+                </div>
+                <div style="padding:var(--space-sm); background:#fff; border-radius:var(--radius-sm);">
+                  <div class="text-xs text-muted">단백질</div>
+                  <div class="font-bold" style="color:var(--green-600);" id="resultProtein">35</div>
+                  <div class="text-xs text-muted">g</div>
+                </div>
+                <div style="padding:var(--space-sm); background:#fff; border-radius:var(--radius-sm);">
+                  <div class="text-xs text-muted">지방</div>
+                  <div class="font-bold" style="color:#ca8a04;" id="resultFat">18</div>
+                  <div class="text-xs text-muted">g</div>
+                </div>
+              </div>
+              <div class="nutrient-bar" style="margin-top:var(--space-md);">
+                <div class="carb" id="resultCarbBar" style="width:54%;"></div>
+                <div class="protein" id="resultProteinBar" style="width:30%;"></div>
+                <div class="fat" id="resultFatBar" style="width:16%;"></div>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--color-text-muted);">
+                <span>탄수화물 54%</span><span>단백질 30%</span><span>지방 16%</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('uploadMealModal')">취소</button>
+            <button type="submit" class="btn btn-primary">등록하기</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    `;
+
+    initSidebar();
+    initNavHighlight();
+
+    // Meal tag radio toggle styling
+    document.querySelectorAll('input[name="mealTag"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        document.querySelectorAll('input[name="mealTag"]').forEach(r => {
+          r.parentElement.className = r.checked ? 'btn btn-secondary btn-sm' : 'btn btn-outline btn-sm';
+          r.parentElement.style.cursor = 'pointer';
+        });
+      });
+    });
+
+    // Photo preview
+    function handlePhotoPreview(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        document.getElementById('photoPreview').src = ev.target.result;
+        document.getElementById('photoPreview').style.display = 'block';
+        document.getElementById('uploadPlaceholder').style.display = 'none';
+        // Simulate analysis after 1s
+        setTimeout(() => {
+          const kcal = Math.floor(Math.random() * 400) + 300;
+          const carb = Math.floor(Math.random() * 60) + 20;
+          const protein = Math.floor(Math.random() * 40) + 10;
+          const fat = Math.floor(Math.random() * 25) + 5;
+          const total = carb + protein + fat;
+          document.getElementById('resultKcal').textContent = kcal;
+          document.getElementById('resultCarb').textContent = carb;
+          document.getElementById('resultProtein').textContent = protein;
+          document.getElementById('resultFat').textContent = fat;
+          document.getElementById('resultCarbBar').style.width = (carb/total*100)+'%';
+          document.getElementById('resultProteinBar').style.width = (protein/total*100)+'%';
+          document.getElementById('resultFatBar').style.width = (fat/total*100)+'%';
+          document.getElementById('analysisResult').style.display = 'block';
+          showToast('영양 분석이 완료되었습니다!', 'success');
+        }, 1000);
+      };
+      reader.readAsDataURL(file);
+    }
+    window.handlePhotoPreview = handlePhotoPreview;
+
+    // Upload handler
+    function handleMealUpload(e) {
+      e.preventDefault();
+      showToast('음식이 등록되었습니다!', 'success');
+      closeModal('uploadMealModal');
+    }
+    window.handleMealUpload = handleMealUpload;
+
+    // Render 7-day chart
+    renderWeeklyCalChart();
+
+    function renderWeeklyCalChart() {
+      const barArea = document.getElementById('chartBarArea');
+      const labelArea = document.getElementById('chartLabels');
+      if (!barArea || !labelArea) return;
+      const maxCal = Math.max(...dailyTotals.map(d => d.total.kcal), targetCal) + 300;
+      const barH = 230;
+
+      // Target line - positioned inside barArea which is exactly barH tall
+      const targetLine = document.createElement('div');
+      const targetBottomPx = (targetCal / maxCal) * barH;
+      targetLine.style.cssText = `position:absolute; left:0; right:0; bottom:${targetBottomPx}px; border-top:2px dashed var(--color-danger); opacity:0.6; z-index:1;`;
+      const targetLabel = document.createElement('span');
+      targetLabel.style.cssText = 'position:absolute; right:0; top:-18px; font-size:0.7rem; color:var(--color-danger); font-weight:600;';
+      targetLabel.textContent = targetCal + ' kcal';
+      targetLine.appendChild(targetLabel);
+      barArea.appendChild(targetLine);
+
+      dailyTotals.forEach((d, i) => {
+        // Bar column (inside barArea)
+        const col = document.createElement('div');
+        col.style.cssText = 'display:flex; flex-direction:column; align-items:center; flex:1; gap:4px; justify-content:flex-end;';
+
+        // Kcal label on top
+        const kcalLabel = document.createElement('div');
+        kcalLabel.style.cssText = 'font-size:0.7rem; font-weight:600; color:var(--color-text);';
+        kcalLabel.textContent = d.total.kcal;
+
+        // Stacked bar
+        const bar = document.createElement('div');
+        bar.className = 'chart-stacked-bar';
+        const totalH = (d.total.kcal / maxCal) * barH;
+        bar.style.height = totalH + 'px';
+
+        const nutrientTotal = d.total.carb + d.total.protein + d.total.fat;
+        const carbH = (d.total.carb / nutrientTotal) * totalH;
+        const proteinH = (d.total.protein / nutrientTotal) * totalH;
+        const fatH = totalH - carbH - proteinH;
+
+        const carbDiv = document.createElement('div');
+        carbDiv.className = 'carb';
+        carbDiv.style.height = carbH + 'px';
+        carbDiv.title = '탄수화물: ' + d.total.carb + 'g';
+
+        const proteinDiv = document.createElement('div');
+        proteinDiv.className = 'protein';
+        proteinDiv.style.height = proteinH + 'px';
+        proteinDiv.title = '단백질: ' + d.total.protein + 'g';
+
+        const fatDiv = document.createElement('div');
+        fatDiv.className = 'fat';
+        fatDiv.style.height = fatH + 'px';
+        fatDiv.title = '지방: ' + d.total.fat + 'g';
+
+        bar.appendChild(fatDiv);
+        bar.appendChild(proteinDiv);
+        bar.appendChild(carbDiv);
+
+        col.appendChild(kcalLabel);
+        col.appendChild(bar);
+        barArea.appendChild(col);
+
+        // Label column (inside labelArea)
+        const labelCol = document.createElement('div');
+        labelCol.style.cssText = 'flex:1; text-align:center;';
+
+        const dayLabel = document.createElement('div');
+        dayLabel.style.cssText = 'font-size:0.8rem; font-weight:500; color:var(--color-text-secondary);';
+        dayLabel.textContent = d.day;
+
+        const dateLabel = document.createElement('div');
+        dateLabel.style.cssText = 'font-size:0.65rem; color:var(--color-text-muted);';
+        dateLabel.textContent = d.date;
+
+        labelCol.appendChild(dayLabel);
+        labelCol.appendChild(dateLabel);
+        labelArea.appendChild(labelCol);
+      });
+    }
+
+    // Nutrition comment
+    renderNutritionComment();
+
+    function renderNutritionComment() {
+      const container = document.getElementById('nutritionComment');
+      if (!container) return;
+
+      const avgKcal = Math.round(dailyTotals.reduce((s, d) => s + d.total.kcal, 0) / 7);
+      const avgCarb = Math.round(dailyTotals.reduce((s, d) => s + d.total.carb, 0) / 7);
+      const avgProtein = Math.round(dailyTotals.reduce((s, d) => s + d.total.protein, 0) / 7);
+      const avgFat = Math.round(dailyTotals.reduce((s, d) => s + d.total.fat, 0) / 7);
+
+      let comments = [];
+      if (avgKcal > targetCal) {
+        comments.push(`평균 섭취 칼로리(${avgKcal}kcal)가 목표(${targetCal}kcal)보다 <strong style="color:var(--color-danger);">${avgKcal - targetCal}kcal 초과</strong>하고 있습니다. 식사량을 조절해보세요.`);
+      } else {
+        comments.push(`평균 섭취 칼로리(${avgKcal}kcal)가 목표(${targetCal}kcal) 이내로 잘 유지되고 있습니다.`);
+      }
+
+      if (avgProtein < 100) {
+        comments.push(`단백질 섭취량(일 평균 ${avgProtein}g)이 다소 부족합니다. 닭가슴살, 계란, 두부 등 단백질 식품을 추가해보세요.`);
+      } else {
+        comments.push(`단백질 섭취량(일 평균 ${avgProtein}g)이 적절합니다. 꾸준히 유지하세요.`);
+      }
+
+      if (avgFat > 70) {
+        comments.push(`지방 섭취량(일 평균 ${avgFat}g)이 높은 편입니다. 튀김이나 기름진 음식을 줄여보세요.`);
+      }
+
+      container.innerHTML = `
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" style="display:inline; vertical-align:middle; margin-right:4px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            영양 분석 코멘트
+          </div>
+          <span class="badge badge-primary">AI 분석</span>
+        </div>
+        <div class="flex-col gap-md" style="font-size:0.9rem; line-height:1.7; color:var(--color-text-secondary);">
+          ${comments.map(c => `<p>• ${c}</p>`).join('')}
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-sm); margin-top:var(--space-lg); text-align:center;">
+          <div style="padding:var(--space-sm) var(--space-md); background:var(--color-bg-subtle); border-radius:var(--radius-sm);">
+            <div class="text-xs text-muted">평균 칼로리</div>
+            <div class="font-bold">${avgKcal} kcal</div>
+          </div>
+          <div style="padding:var(--space-sm) var(--space-md); background:var(--color-bg-subtle); border-radius:var(--radius-sm);">
+            <div class="text-xs text-muted">평균 탄수화물</div>
+            <div class="font-bold">${avgCarb}g</div>
+          </div>
+          <div style="padding:var(--space-sm) var(--space-md); background:var(--color-bg-subtle); border-radius:var(--radius-sm);">
+            <div class="text-xs text-muted">평균 단백질</div>
+            <div class="font-bold">${avgProtein}g</div>
+          </div>
+          <div style="padding:var(--space-sm) var(--space-md); background:var(--color-bg-subtle); border-radius:var(--radius-sm);">
+            <div class="text-xs text-muted">평균 지방</div>
+            <div class="font-bold">${avgFat}g</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Render 7-day meal details
+    renderMealDetails();
+
+    function renderMealDetails() {
+      const container = document.getElementById('mealDetails');
+      if (!container) return;
+
+      const tagColors = {
+        '아침': { bg: 'var(--teal-50)', color: 'var(--teal-700)' },
+        '점심': { bg: 'var(--green-50)', color: 'var(--green-600)' },
+        '저녁': { bg: '#eff6ff', color: '#2563eb' },
+        '간식': { bg: '#fefce8', color: '#ca8a04' },
+      };
+
+      container.innerHTML = dailyTotals.map(d => `
+        <div>
+          <div class="flex-row justify-between items-center" style="margin-bottom:var(--space-sm);">
+            <div class="flex-row gap-sm items-center">
+              <span class="font-semibold">${d.day}요일</span>
+              <span class="text-sm text-muted">${d.date}</span>
+            </div>
+            <div class="flex-row gap-md text-sm">
+              <span class="font-semibold">${d.total.kcal} kcal</span>
+              <span class="text-muted">탄수화물 ${d.total.carb}g · 단백질 ${d.total.protein}g · 지방 ${d.total.fat}g</span>
+            </div>
+          </div>
+          <div class="day-meals flex-col gap-sm">
+            ${d.meals.map(m => `
+              <div class="meal-card">
+                <img class="meal-img" src="${m.img}" alt="${m.name}">
+                <div class="meal-info">
+                  <span class="meal-tag" style="background:${tagColors[m.tag]?.bg || 'var(--teal-50)'};color:${tagColors[m.tag]?.color || 'var(--teal-700)'};">${m.tag}</span>
+                  <div class="meal-name">${m.name}</div>
+                  <div class="meal-nutrients">
+                    <span><strong>${m.kcal}</strong> kcal</span>
+                    <span>탄수화물 <strong>${m.carb}g</strong></span>
+                    <span>단백질 <strong>${m.protein}g</strong></span>
+                    <span>지방 <strong>${m.fat}g</strong></span>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

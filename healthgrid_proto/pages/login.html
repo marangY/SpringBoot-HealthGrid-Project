@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - 헬스그리드</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="auth-layout">
+    <!-- Left: Form -->
+    <div class="auth-left">
+      <div class="auth-box">
+        <div style="display:flex; align-items:center; gap:var(--space-sm); margin-bottom:var(--space-2xl);">
+          <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--teal-500),var(--green-400));border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem;">H</div>
+          <span style="font-size:1.3rem;font-weight:700;">Health<span style="color:var(--color-primary);">Grid</span></span>
+        </div>
+
+        <h2 class="auth-title">로그인</h2>
+        <p class="auth-subtitle">다시 오신 것을 환영합니다.</p>
+
+        <!-- Tabs: Password / OTP -->
+        <div class="tabs" style="margin-bottom:var(--space-lg);">
+          <div class="tab-item active" data-tab="tab-password">아이디 / 비밀번호</div>
+          <div class="tab-item" data-tab="tab-otp">Google Authenticator</div>
+        </div>
+
+        <!-- Tab: Password Login -->
+        <div class="tab-content active" id="tab-password">
+          <form onsubmit="handlePasswordLogin(event)">
+            <div class="form-group">
+              <label class="form-label">아이디</label>
+              <input type="text" class="form-input" id="loginUsername" placeholder="아이디를 입력하세요" required value="healthuser">
+            </div>
+            <div class="form-group">
+              <label class="form-label">비밀번호</label>
+              <input type="password" class="form-input" id="loginPassword" placeholder="비밀번호를 입력하세요" required value="password123">
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-lg);">
+              <label style="display:flex; align-items:center; gap:var(--space-sm); font-size:0.85rem; color:var(--color-text-secondary); cursor:pointer;">
+                <input type="checkbox" checked style="accent-color:var(--color-primary); width:16px; height:16px;">
+                로그인 유지
+              </label>
+              <a href="#" style="font-size:0.85rem;" onclick="showToast('비밀번호 재설정 메일이 발송되었습니다.','info'); return false;">비밀번호 찾기</a>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-full">로그인</button>
+          </form>
+        </div>
+
+        <!-- Tab: OTP Login -->
+        <div class="tab-content" id="tab-otp">
+          <form onsubmit="handleOtpLogin(event)">
+            <div class="form-group">
+              <label class="form-label">아이디</label>
+              <input type="text" class="form-input" id="otpUsername" placeholder="아이디를 입력하세요" required value="healthuser">
+            </div>
+            <div class="form-group">
+              <label class="form-label">인증 코드</label>
+              <input type="text" class="form-input" id="otpCode" placeholder="6자리 인증 코드" maxlength="6" style="letter-spacing:0.3em; text-align:center; font-size:1.3rem;" required>
+              <p class="form-hint">Google Authenticator 앱에 표시된 6자리 코드를 입력하세요</p>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-full" style="margin-top:var(--space-md);">인증 로그인</button>
+          </form>
+        </div>
+
+        <div class="auth-divider">또는</div>
+
+        <button class="btn btn-outline btn-lg w-full" style="gap:var(--space-sm);" onclick="showToast('소셜 로그인은 준비 중입니다.','info')">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Google로 로그인
+        </button>
+
+        <p style="text-align:center; margin-top:var(--space-lg); font-size:0.9rem; color:var(--color-text-secondary);">
+          계정이 없으신가요? <a href="register.html" style="font-weight:600;">회원가입</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- Right: Visual -->
+    <div class="auth-right" style="background-image:url('https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/community-fitness-MLffZfgYzt2SrAt7Sb23Qw.webp');">
+      <div class="auth-quote">
+        <h2 style="font-size:1.8rem; margin-bottom:var(--space-md); color:#fff;">함께 만드는 건강</h2>
+        <p style="font-size:1rem; opacity:0.9; line-height:1.7;">식단 분석, 운동 추적, 커뮤니티까지<br>당신의 건강 파트너 헬스그리드</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    // Init tabs
+    initTabs();
+
+    function handlePasswordLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+
+      if (!username || !password) {
+        showToast('아이디와 비밀번호를 입력해주세요.', 'error');
+        return;
+      }
+
+      // Simulate login
+      Store.set('loggedIn', true);
+      showToast('로그인 성공!', 'success');
+      setTimeout(() => {
+        window.location.href = '../index.html';
+      }, 1000);
+    }
+
+    function handleOtpLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('otpUsername').value;
+      const code = document.getElementById('otpCode').value;
+
+      if (!username || !code) {
+        showToast('아이디와 인증 코드를 입력해주세요.', 'error');
+        return;
+      }
+
+      if (code.length !== 6) {
+        showToast('6자리 인증 코드를 입력해주세요.', 'error');
+        return;
+      }
+
+      // Simulate OTP login
+      Store.set('loggedIn', true);
+      showToast('인증 로그인 성공!', 'success');
+      setTimeout(() => {
+        window.location.href = '../index.html';
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

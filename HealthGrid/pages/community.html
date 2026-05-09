@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>커뮤니티 - 헬스그리드</title>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .post-feed { display: flex; flex-direction: column; gap: var(--space-lg); }
+    .post-card .post-author-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color var(--duration-fast) ease;
+    }
+    .post-card .post-author-name:hover { color: var(--color-primary); }
+    .post-time { font-size: 0.75rem; color: var(--color-text-muted); }
+    .post-actions {
+      display: flex;
+      gap: var(--space-lg);
+      padding: var(--space-sm) var(--space-lg);
+      border-top: 1px solid var(--color-border-light);
+    }
+    .post-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      padding: var(--space-sm) 0;
+      transition: color var(--duration-fast) ease;
+    }
+    .post-action-btn:hover { color: var(--color-primary); }
+    .post-action-btn.liked { color: var(--color-danger); }
+    .loading-spinner {
+      display: flex;
+      justify-content: center;
+      padding: var(--space-xl);
+    }
+    .loading-spinner .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .user-profile-panel {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      padding: var(--space-2xl);
+      margin-bottom: var(--space-lg);
+      animation: fadeIn 0.3s ease;
+    }
+    .write-box {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-card);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+    }
+    .upload-zone {
+      border: 2px dashed var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2xl);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--duration-fast) ease;
+      background: var(--color-bg-subtle);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--color-primary);
+      background: var(--teal-50);
+    }
+    .upload-zone input[type="file"] { display: none; }
+    .upload-preview {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-sm);
+    }
+    /* 댓글 영역 */
+    .post-comment-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: var(--space-sm) var(--space-lg);
+      border-top: 1px solid var(--color-border-light);
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: color var(--duration-fast) ease, background var(--duration-fast) ease;
+      user-select: none;
+    }
+    .post-comment-toggle:hover { color: var(--color-primary); background: var(--teal-50); }
+    .post-comment-toggle.active { color: var(--color-primary); }
+    .comment-section {
+      display: none;
+      border-top: 1px solid var(--color-border-light);
+      background: var(--color-bg-subtle);
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+      padding: var(--space-md) var(--space-lg);
+    }
+    .comment-section.open { display: block; animation: fadeIn 0.2s ease; }
+    .comment-item {
+      display: flex;
+      gap: var(--space-sm);
+      padding: var(--space-sm) 0;
+      border-bottom: 1px solid var(--color-border-light);
+    }
+    .comment-item:last-child { border-bottom: none; }
+    .comment-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .comment-body { flex: 1; min-width: 0; }
+    .comment-author {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 2px;
+    }
+    .comment-text {
+      font-size: 0.85rem;
+      color: var(--color-text-secondary);
+      line-height: 1.5;
+    }
+    .comment-time {
+      font-size: 0.72rem;
+      color: var(--color-text-muted);
+      margin-top: 3px;
+    }
+    .comment-write {
+      display: flex;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+      align-items: flex-end;
+    }
+    .comment-input {
+      flex: 1;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: none;
+      background: var(--color-surface);
+      color: var(--color-text);
+      transition: border-color var(--duration-fast) ease;
+      line-height: 1.5;
+      min-height: 38px;
+      max-height: 100px;
+    }
+    .comment-input:focus { outline: none; border-color: var(--color-primary); }
+    .comment-submit {
+      background: var(--color-primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-md);
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background var(--duration-fast) ease;
+      height: 38px;
+    }
+    .comment-submit:hover { background: var(--teal-700); }
+    .no-comments {
+      text-align: center;
+      padding: var(--space-md) 0;
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-layout" id="appLayout"></div>
+
+  <script src="../js/app.js"></script>
+  <script>
+    // Dummy authors
+    const authors = [
+      { id: 'u1', name: '김건강', initials: '김', color: 'var(--teal-200)' },
+      { id: 'u2', name: '이운동', initials: '이', color: 'var(--green-200)' },
+      { id: 'u3', name: '박피트', initials: '박', color: '#bfdbfe' },
+      { id: 'u4', name: '최헬스', initials: '최', color: '#fde68a' },
+      { id: 'u5', name: '정다이어트', initials: '정', color: '#c4b5fd' },
+      { id: 'u6', name: '한근육', initials: '한', color: '#fbcfe8' },
+    ];
+
+    const postImages = [
+      'https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/exercise-training-VYW7UoPm5sJNDZZKfLktU3.webp',
+      'https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/diet-analysis-VR7c64JeA3r4T7phyRBh7m.webp',
+      'https://d2xsxph8kpxj0f.cloudfront.net/310519663539254530/E5XfMLNghuionsufigPudH/community-fitness-MLffZfgYzt2SrAt7Sb23Qw.webp',
+      'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=800&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=800&h=500&fit=crop',
+      'https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800&h=500&fit=crop',
+    ];
+
+    const postTitles = [
+      '오늘 처음으로 5km 완주했습니다!',
+      '한 달간의 식단 관리 후기',
+      '홈트레이닝 루틴 공유합니다',
+      '체중 10kg 감량 성공 후기',
+      '오늘의 건강 도시락 🥗',
+      '초보자를 위한 스쿼트 자세 팁',
+      '아침 러닝의 효과를 느끼고 있어요',
+      '단백질 쉐이크 레시피 추천',
+      '3개월 바디프로필 도전기',
+      '요가 시작한 지 2주차 후기',
+      '오늘 데드리프트 개인 기록 갱신!',
+      '건강한 간식 추천 리스트',
+      '주말 등산 다녀왔습니다',
+      '식단 관리 앱 사용 꿀팁',
+      '운동 전후 스트레칭의 중요성',
+    ];
+
+    const postContents = [
+      '꾸준히 달리기를 해왔는데 드디어 5km를 쉬지 않고 완주했습니다. 처음에는 1km도 힘들었는데 3개월 만에 여기까지 왔네요. 포기하지 않으면 된다는 걸 다시 한번 느꼈습니다.',
+      '한 달간 탄수화물을 줄이고 단백질 위주로 식단을 바꿔봤습니다. 체중은 3kg 줄었고 무엇보다 컨디션이 훨씬 좋아졌어요. 식단 기록의 중요성을 실감합니다.',
+      '집에서 할 수 있는 30분 루틴을 공유합니다. 스쿼트 20회, 푸시업 15회, 플랭크 1분을 3세트 반복하면 충분한 운동이 됩니다.',
+      '6개월간의 여정이었습니다. 식단 조절과 주 4회 운동을 병행했고, 헬스그리드 앱으로 매일 기록하면서 동기부여를 받았습니다.',
+      '오늘 점심 도시락입니다. 닭가슴살, 현미밥, 브로콜리, 방울토마토로 구성했어요. 약 500kcal 정도 됩니다.',
+      '스쿼트할 때 무릎이 발끝을 넘어가면 안 된다는 건 오해입니다. 중요한 건 무게 중심이 발 중앙에 있는 것이에요.',
+      '아침 6시에 일어나서 러닝을 시작한 지 한 달째입니다. 확실히 하루 종일 에너지가 넘치고 수면의 질도 좋아졌어요.',
+      '바나나 1개, 우유 200ml, 프로틴 파우더 1스쿱, 땅콩버터 1스푼을 블렌더에 갈면 맛있는 단백질 쉐이크가 됩니다.',
+      '3개월 동안 체지방률 22%에서 15%까지 줄였습니다. 매주 사진을 찍어서 비교하니 변화가 확실히 보이더라고요.',
+      '요가를 시작하고 나서 유연성이 눈에 띄게 좋아졌습니다. 특히 허리 통증이 많이 줄었어요. 강추합니다.',
+      '데드리프트 120kg 성공했습니다! 3개월 전 80kg에서 시작해서 꾸준히 올렸더니 드디어 목표 달성!',
+      '다이어트 중 간식이 먹고 싶을 때: 그릭요거트, 견과류, 삶은 달걀, 당근스틱 추천합니다.',
+      '주말에 북한산 다녀왔는데 왕복 4시간에 약 800kcal 소모했습니다. 자연 속에서 운동하니 기분도 좋고 칼로리도 많이 빠지네요.',
+      '헬스그리드에서 매일 식단 사진 올리면서 관리하니까 확실히 의식적으로 건강한 음식을 선택하게 됩니다.',
+      '운동 전 동적 스트레칭, 운동 후 정적 스트레칭을 꼭 하세요. 부상 예방에 정말 중요합니다.',
+    ];
+
+    // Dummy comments pool
+    const dummyCommentTexts = [
+      '정말 대단하시네요! 저도 도전해봐야겠어요.',
+      '정보 감사합니다. 도움이 많이 되었어요!',
+      '저도 비슷한 경험을 했는데 공감되네요.',
+      '오오 대단해요! 어떻게 시작하셨나요?',
+      '좋은 정보 감사해요. 더 공유해주세요!',
+      '화이팅입니다! 저도 열심히 해보겠습니다.',
+      '정말 유용한 팁이네요. 고맙습니다!',
+      '매일 기록하는 게 정말 중요하더라고요.',
+      '저도 오늘부터 시작해봐야겠어요!',
+      '대단하신 의지력에 박수 보냅니다!',
+    ];
+
+    // Generate dummy posts
+    let allPosts = [];
+    for (let i = 0; i < 50; i++) {
+      const author = authors[Math.floor(Math.random() * authors.length)];
+      const hasImage = Math.random() > 0.3;
+      const hoursAgo = Math.floor(Math.random() * 168);
+      const date = new Date(Date.now() - hoursAgo * 3600000);
+      // 게시글당 0~3개 더미 댓글 생성
+      const numComments = Math.floor(Math.random() * 4);
+      const postComments = [];
+      for (let c = 0; c < numComments; c++) {
+        const cAuthor = authors[Math.floor(Math.random() * authors.length)];
+        const cDate = new Date(date.getTime() + (c + 1) * 600000);
+        postComments.push({
+          id: 'c' + i + '_' + c,
+          author: cAuthor,
+          text: dummyCommentTexts[(i + c) % dummyCommentTexts.length],
+          time: cDate,
+        });
+      }
+      allPosts.push({
+        id: 'p' + i,
+        author,
+        title: postTitles[i % postTitles.length],
+        content: postContents[i % postContents.length],
+        image: hasImage ? postImages[i % postImages.length] : null,
+        time: date,
+        liked: false,
+        commentList: postComments,
+      });
+    }
+    allPosts.sort((a, b) => b.time - a.time);
+
+    let currentPage = 0;
+    const PAGE_SIZE = 5;
+    let loading = false;
+    let filterAuthor = null;
+
+    document.getElementById('appLayout').innerHTML = renderSidebar('community') + `
+    <main class="main-content">
+      <header class="page-header">
+        <div>
+          <h1>커뮤니티</h1>
+          <p class="text-sm text-muted">건강한 라이프스타일을 함께 나눠요</p>
+        </div>
+        <div class="header-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('writePostModal')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            글쓰기
+          </button>
+        </div>
+      </header>
+
+      <div class="page-body" style="max-width:720px;">
+        <!-- User filter panel (shown when clicking author) -->
+        <div id="userFilterPanel" style="display:none;"></div>
+
+        <!-- Post Feed -->
+        <div class="post-feed" id="postFeed"></div>
+
+        <!-- Loading spinner -->
+        <div class="loading-spinner" id="loadingSpinner" style="display:none;">
+          <div class="spinner"></div>
+        </div>
+
+        <!-- Sentinel for infinite scroll -->
+        <div id="scrollSentinel" style="height:1px;"></div>
+      </div>
+    </main>
+
+    <!-- My Posts Modal -->
+    <div class="modal-overlay" id="myPostsModal">
+      <div class="modal" style="max-width:640px; max-height:80vh; display:flex; flex-direction:column;">
+        <div class="modal-header">
+          <h3>내 게시글</h3>
+          <div class="modal-close" onclick="closeModal('myPostsModal')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+        <div id="myPostsList" style="overflow-y:auto; flex:1; padding:var(--space-sm) 0;"></div>
+      </div>
+    </div>
+
+    <!-- Edit Post Modal -->
+    <div class="modal-overlay" id="editPostModal">
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+          <h3>게시글 수정</h3>
+          <div class="modal-close" onclick="closeModal('editPostModal')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+        <form onsubmit="handleEditPost(event)">
+          <input type="hidden" id="editPostId">
+          <div class="form-group">
+            <label class="form-label">제목</label>
+            <input type="text" class="form-input" id="editPostTitle" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">내용</label>
+            <textarea class="form-textarea" id="editPostContent" rows="5" required></textarea>
+          </div>
+          <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('editPostModal'); openModal('myPostsModal');">취소</button>
+            <button type="submit" class="btn btn-primary">수정 완료</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirm Modal -->
+    <div class="modal-overlay" id="deleteConfirmModal">
+      <div class="modal" style="max-width:400px;">
+        <div class="modal-header">
+          <h3>게시글 삭제</h3>
+          <div class="modal-close" onclick="closeModal('deleteConfirmModal')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+        <p style="margin-bottom:var(--space-xl); color:var(--color-text-secondary);">이 게시글을 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.</p>
+        <input type="hidden" id="deletePostId">
+        <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeModal('deleteConfirmModal'); openModal('myPostsModal');">취소</button>
+          <button class="btn" style="background:#ef4444;color:#fff;" onclick="confirmDeletePost()">삭제</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Write Post Modal -->
+    <div class="modal-overlay" id="writePostModal">
+      <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+          <h3>게시글 작성</h3>
+          <div class="modal-close" onclick="closeModal('writePostModal')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+        </div>
+        <form onsubmit="handleWritePost(event)">
+          <div class="form-group">
+            <label class="form-label">제목</label>
+            <input type="text" class="form-input" id="postTitle" placeholder="제목을 입력하세요" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">내용</label>
+            <textarea class="form-textarea" id="postContent" placeholder="내용을 입력하세요" rows="5" required></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">이미지 (선택)</label>
+            <div class="upload-zone" id="postUploadZone" onclick="document.getElementById('postPhoto').click()">
+              <input type="file" id="postPhoto" accept="image/*" onchange="handlePostPhotoPreview(event)">
+              <div id="postUploadPlaceholder">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="1.5" style="margin:0 auto var(--space-sm);display:block;">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <p class="text-sm text-muted">클릭하거나 사진을 드래그하세요</p>
+                <p class="text-xs text-muted" style="margin-top:4px;">JPG, PNG 형식 지원</p>
+              </div>
+              <img id="postPhotoPreview" class="upload-preview" style="display:none;">
+            </div>
+          </div>
+          <div style="display:flex; gap:var(--space-sm); justify-content:flex-end;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('writePostModal')">취소</button>
+            <button type="submit" class="btn btn-primary">게시하기</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    `;
+
+    initSidebar();
+    initNavHighlight();
+
+    // Render posts
+    function getFilteredPosts() {
+      if (filterAuthor) return allPosts.filter(p => p.author.id === filterAuthor);
+      return allPosts;
+    }
+
+    function formatTimeAgo(date) {
+      const y = date.getFullYear();
+      const m = date.getMonth() + 1;
+      const d = date.getDate();
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      return `${y}년 ${m}월 ${d}일 ${hh}:${mm}`;
+    }
+
+    function renderComments(postId) {
+      const post = allPosts.find(p => p.id === postId);
+      if (!post) return '';
+      const list = post.commentList || [];
+      const items = list.length === 0
+        ? '<div class="no-comments">댓글이 없습니다. 첫 댓글을 달아보세요!</div>'
+        : list.map(c => `
+          <div class="comment-item">
+            <div class="comment-avatar" style="background:linear-gradient(135deg,${c.author.color},var(--teal-100));">${c.author.initials}</div>
+            <div class="comment-body">
+              <div class="comment-author">${c.author.name}</div>
+              <div class="comment-text">${c.text}</div>
+              <div class="comment-time">${formatTimeAgo(c.time)}</div>
+            </div>
+          </div>
+        `).join('');
+      return `
+        <div class="comment-section open" id="comments-${postId}">
+          <div id="comment-list-${postId}">${items}</div>
+          <div class="comment-write">
+            <textarea class="comment-input" id="comment-input-${postId}" placeholder="댓글을 입력하세요..." rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitComment('${postId}');}"
+            ></textarea>
+            <button class="comment-submit" onclick="submitComment('${postId}')">\ub4f1\ub85d</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPostCard(post) {
+      const commentCount = (post.commentList || []).length;
+      return `
+        <div class="post-card" id="post-${post.id}">
+          <div class="post-header">
+            <div class="post-avatar" style="background:linear-gradient(135deg, ${post.author.color}, var(--teal-100));">${post.author.initials}</div>
+            <div style="flex:1;">
+              <div class="post-author-name" onclick="showUserPosts('${post.author.id}', '${post.author.name}')">${post.author.name}</div>
+              <div class="post-time">${formatTimeAgo(post.time)}</div>
+            </div>
+          </div>
+          ${post.image ? `<img class="post-img" src="${post.image}" alt="${post.title}">` : ''}
+          <div class="post-body">
+            <div class="post-title">${post.title}</div>
+            <p class="post-text">${post.content}</p>
+          </div>
+          <div class="post-comment-toggle" id="toggle-${post.id}" onclick="toggleComments('${post.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span id="comment-count-${post.id}">${commentCount}</span>
+            <span>댓글</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function loadMorePosts() {
+      if (loading) return;
+      const posts = getFilteredPosts();
+      const start = currentPage * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      if (start >= posts.length) return;
+
+      loading = true;
+      document.getElementById('loadingSpinner').style.display = 'flex';
+
+      setTimeout(() => {
+        const feed = document.getElementById('postFeed');
+        const batch = posts.slice(start, end);
+        batch.forEach(post => {
+          feed.insertAdjacentHTML('beforeend', renderPostCard(post));
+        });
+        currentPage++;
+        loading = false;
+        document.getElementById('loadingSpinner').style.display = 'none';
+      }, 500);
+    }
+
+    // Initial load
+    loadMorePosts();
+
+    // Infinite scroll with IntersectionObserver
+    const sentinel = document.getElementById('scrollSentinel');
+    const scrollObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        loadMorePosts();
+      }
+    }, { rootMargin: '200px' });
+    scrollObserver.observe(sentinel);
+
+
+
+    // Show user's posts
+    function showUserPosts(authorId, authorName) {
+      filterAuthor = authorId;
+      currentPage = 0;
+      document.getElementById('postFeed').innerHTML = '';
+
+      const panel = document.getElementById('userFilterPanel');
+      const author = authors.find(a => a.id === authorId);
+      const userPosts = allPosts.filter(p => p.author.id === authorId);
+
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <div class="user-profile-panel">
+          <div class="flex-row gap-md items-center mb-md">
+            <div class="post-avatar" style="width:56px;height:56px;font-size:1.2rem;background:linear-gradient(135deg, ${author.color}, var(--teal-100));">${author.initials}</div>
+            <div>
+              <h3>${authorName}</h3>
+              <p class="text-sm text-muted">게시글 ${userPosts.length}개</p>
+            </div>
+
+          </div>
+        </div>
+      `;
+
+      loadMorePosts();
+    }
+    window.showUserPosts = showUserPosts;
+
+    function clearFilter() {
+      filterAuthor = null;
+      currentPage = 0;
+      document.getElementById('postFeed').innerHTML = '';
+      document.getElementById('userFilterPanel').style.display = 'none';
+      loadMorePosts();
+    }
+    window.clearFilter = clearFilter;
+
+    // Write post handler
+    function handleWritePost(e) {
+      e.preventDefault();
+      const title = document.getElementById('postTitle').value.trim();
+      const content = document.getElementById('postContent').value.trim();
+      if (!title || !content) return;
+      const newPost = {
+        id: 'p_my_' + Date.now(),
+        author: authors[0],
+        title,
+        content,
+        image: null,
+        time: new Date(),
+        likes: 0,
+        comments: 0,
+        liked: false,
+        isMine: true,
+      };
+      allPosts.unshift(newPost);
+      currentPage = 0;
+      filterAuthor = null;
+      document.getElementById('postFeed').innerHTML = '';
+      document.getElementById('userFilterPanel').style.display = 'none';
+      loadMorePosts();
+      showToast('게시글이 등록되었습니다!', 'success');
+      closeModal('writePostModal');
+      document.getElementById('postTitle').value = '';
+      document.getElementById('postContent').value = '';
+    }
+    window.handleWritePost = handleWritePost;
+
+    // Photo preview for post
+    function handlePostPhotoPreview(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        document.getElementById('postPhotoPreview').src = ev.target.result;
+        document.getElementById('postPhotoPreview').style.display = 'block';
+        document.getElementById('postUploadPlaceholder').style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+    window.handlePostPhotoPreview = handlePostPhotoPreview;
+
+    // Drag and drop for post upload zone
+    setTimeout(() => {
+      const zone = document.getElementById('postUploadZone');
+      if (!zone) return;
+      zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+      zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+      zone.addEventListener('drop', e => {
+        e.preventDefault();
+        zone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = ev => {
+            document.getElementById('postPhotoPreview').src = ev.target.result;
+            document.getElementById('postPhotoPreview').style.display = 'block';
+            document.getElementById('postUploadPlaceholder').style.display = 'none';
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }, 500);
+
+    // ===== 내 게시글 모달 =====
+    function openMyPostsModal() {
+      renderMyPostsList();
+      openModal('myPostsModal');
+    }
+    window.openMyPostsModal = openMyPostsModal;
+
+    function renderMyPostsList() {
+      const myPosts = allPosts.filter(p => p.author.id === 'u1');
+      const list = document.getElementById('myPostsList');
+      if (myPosts.length === 0) {
+        list.innerHTML = `<div style="text-align:center;padding:var(--space-2xl);color:var(--color-text-muted);">아직 작성한 게시글이 없습니다.</div>`;
+        return;
+      }
+      list.innerHTML = myPosts.map(post => `
+        <div style="padding:var(--space-md) var(--space-lg); border-bottom:1px solid var(--color-border-light);" id="mypost-${post.id}">
+          <div style="display:flex;align-items:flex-start;gap:var(--space-md);">
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;font-size:0.95rem;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${post.title}</div>
+              <div style="font-size:0.78rem;color:var(--color-text-muted);margin-bottom:6px;">${formatTimeAgo(post.time)}</div>
+              <div style="font-size:0.85rem;color:var(--color-text-secondary);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${post.content}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+              <button class="btn btn-sm btn-outline" onclick="openEditModal('${post.id}')" style="font-size:0.78rem;padding:4px 14px;display:flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                수정
+              </button>
+              <button class="btn btn-sm" onclick="openDeleteModal('${post.id}')" style="font-size:0.78rem;padding:4px 14px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;display:flex;align-items:center;gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Edit post
+    function openEditModal(postId) {
+      const post = allPosts.find(p => p.id === postId);
+      if (!post) return;
+      document.getElementById('editPostId').value = postId;
+      document.getElementById('editPostTitle').value = post.title;
+      document.getElementById('editPostContent').value = post.content;
+      closeModal('myPostsModal');
+      openModal('editPostModal');
+    }
+    window.openEditModal = openEditModal;
+
+    function handleEditPost(e) {
+      e.preventDefault();
+      const postId = document.getElementById('editPostId').value;
+      const post = allPosts.find(p => p.id === postId);
+      if (!post) return;
+      post.title = document.getElementById('editPostTitle').value.trim();
+      post.content = document.getElementById('editPostContent').value.trim();
+      const el = document.getElementById('post-' + postId);
+      if (el) el.outerHTML = renderPostCard(post);
+      showToast('게시글이 수정되었습니다!', 'success');
+      closeModal('editPostModal');
+    }
+    window.handleEditPost = handleEditPost;
+
+    // Delete post
+    function openDeleteModal(postId) {
+      document.getElementById('deletePostId').value = postId;
+      closeModal('myPostsModal');
+      openModal('deleteConfirmModal');
+    }
+    window.openDeleteModal = openDeleteModal;
+
+    function confirmDeletePost() {
+      const postId = document.getElementById('deletePostId').value;
+      const idx = allPosts.findIndex(p => p.id === postId);
+      if (idx !== -1) allPosts.splice(idx, 1);
+      const el = document.getElementById('post-' + postId);
+      if (el) {
+        el.style.transition = 'opacity 0.3s, transform 0.3s';
+        el.style.opacity = '0';
+        el.style.transform = 'translateX(20px)';
+        setTimeout(() => el.remove(), 300);
+      }
+      showToast('게시글이 삭제되었습니다.', 'info');
+      closeModal('deleteConfirmModal');
+    }
+    window.confirmDeletePost = confirmDeletePost;
+
+    // ===== 댓글 토글 =====
+    function toggleComments(postId) {
+      const postEl = document.getElementById('post-' + postId);
+      if (!postEl) return;
+      const toggle = document.getElementById('toggle-' + postId);
+      const existing = document.getElementById('comments-' + postId);
+
+      if (existing) {
+        // 이미 열려있으면 닫기
+        existing.remove();
+        toggle.classList.remove('active');
+      } else {
+        // 닫혀있으면 열기
+        postEl.insertAdjacentHTML('beforeend', renderComments(postId));
+        toggle.classList.add('active');
+        // 입력상자 자동 높이 조정
+        const input = document.getElementById('comment-input-' + postId);
+        if (input) {
+          input.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+          });
+        }
+      }
+    }
+    window.toggleComments = toggleComments;
+
+    // ===== 댓글 제출 =====
+    function submitComment(postId) {
+      const input = document.getElementById('comment-input-' + postId);
+      if (!input) return;
+      const text = input.value.trim();
+      if (!text) return;
+
+      const post = allPosts.find(p => p.id === postId);
+      if (!post) return;
+
+      const newComment = {
+        id: 'c_' + Date.now(),
+        author: authors[0], // 현재 로그인 사용자
+        text,
+        time: new Date(),
+      };
+      post.commentList = post.commentList || [];
+      post.commentList.push(newComment);
+
+      // 댓글 목록 업데이트
+      const listEl = document.getElementById('comment-list-' + postId);
+      if (listEl) {
+        // 빈 댓글 메시지 제거
+        const noComment = listEl.querySelector('.no-comments');
+        if (noComment) noComment.remove();
+        listEl.insertAdjacentHTML('beforeend', `
+          <div class="comment-item" style="animation:fadeIn 0.2s ease;">
+            <div class="comment-avatar" style="background:linear-gradient(135deg,${newComment.author.color},var(--teal-100));">${newComment.author.initials}</div>
+            <div class="comment-body">
+              <div class="comment-author">${newComment.author.name}</div>
+              <div class="comment-text">${newComment.text}</div>
+              <div class="comment-time">${formatTimeAgo(newComment.time)}</div>
+            </div>
+          </div>
+        `);
+      }
+
+      // 댓글 수 업데이트
+      const countEl = document.getElementById('comment-count-' + postId);
+      if (countEl) countEl.textContent = post.commentList.length;
+
+      input.value = '';
+      input.style.height = 'auto';
+    }
+    window.submitComment = submitComment;
+  </script>
+</body>
+</html>

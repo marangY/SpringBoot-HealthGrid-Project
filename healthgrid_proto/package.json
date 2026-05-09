@@ -1,0 +1,13 @@
+{
+  "name": "healthgrid",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host --port 3000",
+    "build": "echo 'static site'",
+    "start": "vite preview --host --port 3000"
+  },
+  "devDependencies": {
+    "vite": "^7.1.7"
+  }
+}
